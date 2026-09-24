@@ -46,3 +46,39 @@ body {
   outline: 2px solid var(--gold);
   outline-offset: 3px;
 }
+
+/* EB Garamond, solo la Q. Cormorant la dibuja con una cola que cruza la palabra. */
+@font-face {
+  font-family: "Q simple";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/eb-garamond-q.woff2") format("woff2");
+  unicode-range: U+0051;
+}
+
+#preguntas summary {
+  font-family: "Q simple", var(--font-cormorant), serif;
+}
+
+#preguntas details {
+  interpolate-size: allow-keywords;
+}
+
+#preguntas details::details-content {
+  height: 0;
+  overflow: clip;
+  transition:
+    height 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    content-visibility 0.5s ease allow-discrete;
+}
+
+#preguntas details[open]::details-content {
+  height: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #preguntas details::details-content {
+    transition: none;
+  }
+}

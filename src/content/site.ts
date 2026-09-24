@@ -19,6 +19,7 @@ export const nav = [
   { href: "#inicio", label: "Inicio" },
   { href: "#especialidades", label: "Especialidades" },
   { href: "#sobre-mi", label: "Sobre mí" },
+  { href: "#preguntas", label: "Preguntas" },
   { href: "#contacto", label: "Contacto" },
 ] as const;
 
@@ -98,6 +99,34 @@ export const team = {
   name: "Dra. Andrea Perestiuk",
   role: "Odontóloga · Necochea",
   bio: "Experiencia y actualización constante, con una atención personalizada. Salud bucal, estética y bienestar.",
+};
+
+export const faq = {
+  title: "Preguntas frecuentes",
+  items: [
+    {
+      question: "¿Cómo pido un turno?",
+      answer: `Escribime por WhatsApp al ${site.phoneDisplay} y coordinamos el horario.`,
+      href: whatsappHref(),
+      linkLabel: "Escribir por WhatsApp",
+    },
+    {
+      question: "¿Qué es la odontología integral?",
+      answer:
+        "Es una mirada sobre la salud bucal, la estética y el bienestar. La salud es el equilibrio entre cuerpo, mente y emociones.",
+    },
+    {
+      question: "¿Dónde está el consultorio?",
+      answer: `Atiendo en ${site.location}.`,
+      href: mapsHref(),
+      linkLabel: "Ver en el mapa",
+    },
+    {
+      question: "¿Cómo es la primera consulta?",
+      answer:
+        "Empieza por escuchar. La cercanía y una atención personalizada son parte del tratamiento.",
+    },
+  ],
 };
 
 export const appointment = {

@@ -29,7 +29,7 @@ export function WhatsAppButton({
       href={whatsappHref()}
       target="_blank"
       rel="noopener noreferrer"
-      className={`inline-flex items-center justify-center gap-2 rounded-lg border px-6 py-4 font-sans text-lg transition-colors ${variants[variant]} ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-6 py-4 font-sans text-lg transition-colors ${variants[variant]} ${className}`}
     >
       <WhatsAppIcon />
       <span>{children}</span>

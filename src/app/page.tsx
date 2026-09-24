@@ -1,6 +1,7 @@
 import { About } from "@/components/about";
 import { Appointment } from "@/components/appointment";
 import { Contact } from "@/components/contact";
+import { Faq } from "@/components/faq";
 import { Footer } from "@/components/footer";
 import { Gallery } from "@/components/gallery";
 import { Header } from "@/components/header";
@@ -24,6 +25,7 @@ export default function Home() {
         <Specialties />
         <Gallery />
         <Team />
+        <Faq />
         <Appointment />
         <Contact />
       </main>
