@@ -84,10 +84,6 @@ export const consultorioPhotos = [
     alt: "Sillón del consultorio frente a la ventana al jardín",
     caption: "El sillón, frente al jardín",
   },
-  {
-    src: "/fotos/consultorio-general.jpeg",
-    alt: "Ventana del consultorio, con el jardín detrás del sillón",
-  },
 ] as const;
 
 export const consultorioPhrases = [

@@ -5,8 +5,14 @@ export function Specialties() {
   return (
     <section id="especialidades" className="bg-panel px-6 py-24 md:py-32">
       <div className="mx-auto grid max-w-6xl items-stretch gap-10 lg:grid-cols-2">
-        <div className="flex min-h-80 items-end rounded-2xl bg-forest p-8 sm:p-12">
-          <p className="font-serif text-4xl leading-tight text-cream sm:text-5xl">
+        <div className="relative flex min-h-80 items-end overflow-hidden rounded-2xl p-8 sm:p-12">
+          <img
+            src="/fotos/sonrisa.webp"
+            alt="Revisión de una sonrisa"
+            className="absolute inset-0 h-full w-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-forest/80 via-forest/20 to-transparent" aria-hidden="true" />
+          <p className="relative font-serif text-4xl leading-tight text-cream sm:text-5xl">
             {specialties.phrase}
           </p>
         </div>
