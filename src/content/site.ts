@@ -78,19 +78,25 @@ export const specialties = {
   ],
 };
 
-export const gallery = [
-  { text: "Pequeños cambios, grandes resultados.", tone: "sage" },
-  { text: "La salud bucal también es calidad de vida.", tone: "cream" },
-  { text: "Hábitos simples que hacen grandes cambios.", tone: "sand" },
-  { text: "Cuidar la salud empieza por escuchar.", tone: "sage" },
+export const consultorioPhotos = [
   {
-    text: "También es importante elegir qué queremos para esta nueva etapa.",
-    tone: "cream",
+    src: "/fotos/consultorio-ventana.jpeg",
+    alt: "Sillón del consultorio frente a la ventana al jardín",
+    caption: "El sillón, frente al jardín",
   },
   {
-    text: "Experiencia y actualización constante. Atención personalizada.",
-    tone: "sand",
+    src: "/fotos/consultorio-general.jpeg",
+    alt: "Ventana del consultorio, con el jardín detrás del sillón",
   },
+] as const;
+
+export const consultorioPhrases = [
+  "Pequeños cambios, grandes resultados.",
+  "La salud bucal también es calidad de vida.",
+  "Cuidar la salud empieza por escuchar.",
+  "Hábitos simples que hacen grandes cambios.",
+  "También es importante elegir qué queremos para esta nueva etapa.",
+  "Experiencia y actualización constante. Atención personalizada.",
 ] as const;
 
 export const team = {

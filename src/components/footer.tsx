@@ -12,7 +12,7 @@ export function Footer() {
           <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2">
             {nav.map((item) => (
               <li key={item.href}>
-                <a href={item.href} className="text-forest/80 hover:text-forest">
+                <a href={item.href} className="text-forest hover:underline">
                   {item.label}
                 </a>
               </li>
@@ -20,7 +20,7 @@ export function Footer() {
           </ul>
         </nav>
       </div>
-      <p className="mx-auto mt-8 max-w-6xl text-center text-sm text-muted md:text-left">
+      <p className="mx-auto mt-8 max-w-6xl text-center text-muted md:text-left">
         {site.copyright}
       </p>
     </footer>

@@ -8,7 +8,7 @@ export function Appointment() {
         <h2 className="font-serif text-4xl leading-tight md:text-5xl">{appointment.title}</h2>
         <p className="mt-4 text-lg">
           {appointment.text}{" "}
-          <strong className="font-semibold text-gold">{site.phoneDisplay}</strong>
+          <strong className="font-semibold">{site.phoneDisplay}</strong>
         </p>
         <WhatsAppButton variant="cream" className="mt-8" />
       </div>

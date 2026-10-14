@@ -48,7 +48,7 @@ function CardIcon({ name }: { name: (typeof cards)[number]["icon"] }) {
 
 export function Contact() {
   return (
-    <section id="contacto" className="px-6 py-24 md:py-32">
+    <section id="contacto" className="bg-panel px-6 py-24 md:py-32">
       <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-2">
         <div>
           <h2 className="font-serif text-4xl text-forest md:text-5xl">{contact.title}</h2>
@@ -62,7 +62,7 @@ export function Contact() {
                   rel="noopener noreferrer"
                   className="flex items-start gap-4 rounded-2xl bg-panel p-6 transition-colors hover:bg-sand"
                 >
-                  <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sage">
+                  <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-forest">
                     <CardIcon name={card.icon} />
                   </span>
                   <span>

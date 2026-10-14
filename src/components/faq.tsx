@@ -2,7 +2,7 @@ import { faq } from "@/content/site";
 
 export function Faq() {
   return (
-    <section id="preguntas" className="px-6 py-24 md:py-32">
+    <section id="preguntas" className="bg-panel px-6 py-24 md:py-32">
       <div className="mx-auto max-w-3xl">
         <h2 className="text-center font-serif text-4xl text-forest md:text-5xl">{faq.title}</h2>
         <span className="mx-auto mt-4 block h-0.5 w-16 bg-gold" />
@@ -13,7 +13,7 @@ export function Faq() {
                 {item.question}
                 <span
                   aria-hidden="true"
-                  className="text-gold transition-transform duration-500 ease-out group-open:rotate-45"
+                  className="text-3xl text-forest transition-transform duration-500 ease-out group-open:rotate-45"
                 >
                   +
                 </span>

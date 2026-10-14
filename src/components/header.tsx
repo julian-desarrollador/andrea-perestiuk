@@ -37,7 +37,7 @@ export function Header() {
               <li key={item.href}>
                 <a
                   href={item.href}
-                  className="text-forest/80 underline-offset-8 transition-colors hover:text-forest hover:underline"
+                  className="text-forest underline-offset-8 hover:underline"
                 >
                   {item.label}
                 </a>
@@ -52,13 +52,13 @@ export function Header() {
 
         <button
           type="button"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-forest lg:hidden"
+          className="inline-flex h-12 items-center justify-center rounded-lg px-3 text-base text-forest lg:hidden"
           aria-expanded={open}
           aria-controls="menu-movil"
           onClick={() => setOpen(true)}
         >
-          <span className="sr-only">Abrir menú</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6 fill-current">
+          <span>Menú</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="ml-2 h-6 w-6 fill-current">
             <path d="M3 6h18v2H3zm0 5h14v2H3zm0 5h18v2H3z" />
           </svg>
         </button>
@@ -74,10 +74,10 @@ export function Header() {
                 <Logo />
                 <button
                   type="button"
-                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-forest"
+                  className="inline-flex h-12 shrink-0 items-center gap-2 rounded-lg px-3 text-base text-forest"
                   onClick={() => setOpen(false)}
                 >
-                  <span className="sr-only">Cerrar menú</span>
+                  <span>Cerrar</span>
                   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6 fill-current">
                     <path d="m13.41 12 6.3-6.29-1.42-1.42L12 10.59 5.71 4.29 4.29 5.71 10.59 12l-6.3 6.29 1.42 1.42L12 13.41l6.29 6.3 1.42-1.42z" />
                   </svg>
