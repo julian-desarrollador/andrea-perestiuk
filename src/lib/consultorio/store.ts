@@ -1,5 +1,5 @@
-import { promises as fs } from "fs";
-import path from "path";
+import { Binary, type Collection } from "mongodb";
+import { consultorioDb } from "./db";
 import { fechaDeInicio, isIsoDate, todayInArgentina } from "./fecha";
 import { seedFees } from "./fees";
 import {
@@ -14,11 +14,11 @@ import {
   type ToothMark,
 } from "./types";
 
-const dataDir = path.join(process.cwd(), "data");
-const storePath = path.join(dataDir, "consultorio.json");
-const uploadsDir = path.join(dataDir, "adjuntos");
+type FeeDoc = FeeItem & { order: number };
+type Adjunto = { id: string; mime: string; data: Binary };
 
 let writeChain: Promise<unknown> = Promise.resolve();
+let prepared: Promise<void> | undefined;
 
 function turn<T>(task: () => Promise<T>) {
   const run = writeChain.then(task, task);
@@ -152,30 +152,72 @@ export function sanitizeFees(input: unknown): FeeItem[] {
   });
 }
 
-export async function readStore(): Promise<Store> {
-  try {
-    const raw = await fs.readFile(storePath, "utf8");
-    const parsed = JSON.parse(raw) as Store;
-    if (!Array.isArray(parsed.patients) || !Array.isArray(parsed.fees)) {
-      throw new Error("Archivo inválido");
-    }
-    return parsed;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return { patients: [], fees: seedFees() };
-    }
-    throw error;
+function plain<T extends { _id?: unknown }>(doc: T): Omit<T, "_id"> {
+  const { _id, ...rest } = doc;
+  return rest;
+}
+
+async function patients(): Promise<Collection<Patient>> {
+  return (await consultorioDb()).collection<Patient>("patients");
+}
+
+async function fees(): Promise<Collection<FeeDoc>> {
+  return (await consultorioDb()).collection<FeeDoc>("fees");
+}
+
+async function adjuntos(): Promise<Collection<Adjunto>> {
+  return (await consultorioDb()).collection<Adjunto>("adjuntos");
+}
+
+async function prepare() {
+  if (!prepared) {
+    prepared = (async () => {
+      const database = await consultorioDb();
+      await Promise.all([
+        database.collection("patients").createIndex({ id: 1 }, { unique: true }),
+        database.collection("fees").createIndex({ id: 1 }, { unique: true }),
+        database.collection("adjuntos").createIndex({ id: 1 }, { unique: true }),
+      ]);
+      const fees = database.collection<FeeDoc>("fees");
+      const count = await fees.countDocuments({}, { limit: 1 });
+      if (count > 0) return;
+      const seed = seedFees();
+      if (seed.length === 0) return;
+      await fees.bulkWrite(
+        seed.map((fee, order) => ({
+          updateOne: {
+            filter: { id: fee.id },
+            update: { $setOnInsert: { ...fee, order } },
+            upsert: true,
+          },
+        })),
+      );
+    })().catch((error: unknown) => {
+      prepared = undefined;
+      throw error;
+    });
   }
+  return prepared;
 }
 
-export async function writeStore(store: Store) {
-  await fs.mkdir(dataDir, { recursive: true });
-  const temporary = `${storePath}.tmp`;
-  await fs.writeFile(temporary, JSON.stringify(store), "utf8");
-  await fs.rename(temporary, storePath);
+export async function readStore(): Promise<Store> {
+  await prepare();
+  const [patientDocs, feeDocs] = await Promise.all([
+    (await patients()).find({}, { projection: { _id: 0 } }).toArray(),
+    (await fees()).find({}, { projection: { _id: 0 } }).sort({ order: 1, code: 1 }).toArray(),
+  ]);
+  return {
+    patients: patientDocs.map((item) => plain(item)),
+    fees: feeDocs.map(({ order: _order, ...fee }) => plain(fee)),
+  };
 }
 
-export async function saveUpload(file: File) {
+async function findPatient(id: string) {
+  const doc = await (await patients()).findOne({ id }, { projection: { _id: 0 } });
+  return doc ? plain(doc) : null;
+}
+
+function acceptedUpload(file: File) {
   if (file.size <= 0 || file.size > 5 * 1024 * 1024) {
     throw new Error("El archivo tiene que pesar menos de 5 MB.");
   }
@@ -191,75 +233,82 @@ export async function saveUpload(file: File) {
   if (!allowed.has(mime)) {
     throw new Error("La foto tiene que ser JPG, PNG o PDF.");
   }
+  return mime;
+}
+
+function isFileId(fileId: string) {
+  return /^[0-9a-f-]{36}$/i.test(fileId);
+}
+
+async function saveUpload(file: File) {
+  const mime = acceptedUpload(file);
   const id = crypto.randomUUID();
-  await fs.mkdir(uploadsDir, { recursive: true });
   const bytes = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(path.join(uploadsDir, id), bytes);
+  await (await adjuntos()).insertOne({ id, mime, data: new Binary(bytes) });
   return { fileId: id, fileName: clip(file.name, 180), mime };
 }
 
-export function uploadPath(fileId: string) {
-  if (!/^[0-9a-f-]{36}$/i.test(fileId)) return null;
-  return path.join(uploadsDir, fileId);
+export async function readUpload(fileId: string) {
+  if (!isFileId(fileId)) return null;
+  await prepare();
+  const doc = await (await adjuntos()).findOne({ id: fileId }, { projection: { data: 1 } });
+  if (!doc?.data) return null;
+  return Buffer.from(doc.data.value());
 }
 
-export async function removeUploads(fileIds: string[]) {
-  await Promise.all(
-    fileIds.map(async (fileId) => {
-      const target = uploadPath(fileId);
-      if (!target) return;
-      await fs.rm(target, { force: true });
-    }),
-  );
+async function removeUploads(fileIds: string[]) {
+  const ids = fileIds.filter(isFileId);
+  if (ids.length === 0) return;
+  await (await adjuntos()).deleteMany({ id: { $in: ids } });
 }
 
 export function addPatientRecord(name: string) {
   return turn(async () => {
-    const store = await readStore();
+    await prepare();
     const patient = emptyPatient(name);
-    store.patients.unshift(patient);
-    await writeStore(store);
+    if (!patient.name) throw new Error("Completá el nombre.");
+    await (await patients()).insertOne({ ...patient });
     return patient;
   });
 }
 
 export function savePatientRecord(input: unknown) {
   return turn(async () => {
-    const store = await readStore();
+    await prepare();
     const incoming = sanitizePatient(input);
     if (!incoming) throw new Error("Completá el nombre.");
-    const index = store.patients.findIndex((item) => item.id === incoming.id);
-    if (index < 0) throw new Error("No encontré esta ficha.");
-    const current = store.patients[index];
-    store.patients[index] = {
+    const current = await findPatient(incoming.id);
+    if (!current) throw new Error("No encontré esta ficha.");
+    const next: Patient = {
       ...incoming,
       startedOn: isIsoDate(current.startedOn) ? current.startedOn : incoming.startedOn,
       evolution: mergeVisits(current.evolution ?? [], incoming.evolution, todayInArgentina()),
       consents: current.consents,
     };
-    await writeStore(store);
-    return store.patients[index];
+    await (await patients()).replaceOne({ id: next.id }, { ...next });
+    return next;
   });
 }
 
 export function saveFeeRecord(input: unknown) {
   return turn(async () => {
-    const store = await readStore();
+    await prepare();
     const fee = sanitizeFees([input])[0];
     if (!fee) throw new Error("Revisá el nombre de la práctica.");
-    const index = store.fees.findIndex((item) => item.id === fee.id);
-    if (index < 0) store.fees.push(fee);
-    else store.fees[index] = fee;
-    await writeStore(store);
+    const collection = await fees();
+    const current = await collection.findOne({ id: fee.id }, { projection: { order: 1 } });
+    const order =
+      current?.order ?? ((await collection.find().sort({ order: -1 }).limit(1).next())?.order ?? -1) + 1;
+    await collection.updateOne({ id: fee.id }, { $set: { ...fee, order } }, { upsert: true });
     return fee;
   });
 }
 
 export function saveSignature(patientId: string, kind: ConsentKind, file: File) {
   return turn(async () => {
+    await prepare();
     const uploaded = await saveUpload(file);
-    const store = await readStore();
-    const patient = store.patients.find((item) => item.id === patientId);
+    const patient = await findPatient(patientId);
     if (!patient) throw new Error("No encontré esta ficha.");
     if (!kinds.has(kind)) throw new Error("Esa práctica no tiene hoja.");
     const previous = patient.consents.find((item) => item.kind === kind);
@@ -270,21 +319,23 @@ export function saveSignature(patientId: string, kind: ConsentKind, file: File) 
       signedOn: todayInArgentina(),
       ...uploaded,
     };
-    patient.consents = [...patient.consents.filter((item) => item.kind !== kind), consent];
-    patient.updatedAt = new Date().toISOString();
-    await writeStore(store);
-    return patient;
+    const next: Patient = {
+      ...patient,
+      consents: [...patient.consents.filter((item) => item.kind !== kind), consent],
+      updatedAt: new Date().toISOString(),
+    };
+    await (await patients()).replaceOne({ id: patientId }, { ...next });
+    return next;
   });
 }
 
 export function removePatientRecord(id: string) {
   return turn(async () => {
-    const store = await readStore();
-    const current = store.patients.find((item) => item.id === id);
+    await prepare();
+    const current = await findPatient(id);
     if (current) {
       await removeUploads(current.consents.flatMap((item) => (item.fileId ? [item.fileId] : [])));
     }
-    store.patients = store.patients.filter((item) => item.id !== id);
-    await writeStore(store);
+    await (await patients()).deleteOne({ id });
   });
 }
