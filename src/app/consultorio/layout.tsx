@@ -13,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function ConsultorioLayout({ children }: LayoutProps<"/consultorio">) {
-  return children;
+  return <div className="consultorio-ui">{children}</div>;
 }

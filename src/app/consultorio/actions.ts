@@ -10,6 +10,7 @@ import {
 import { sameSecret, sessionCookie, sessionToken } from "@/lib/consultorio/session";
 import {
   addPatientRecord,
+  fichasConNombre,
   removePatientRecord,
   saveFeeRecord,
   savePatientRecord,
@@ -41,6 +42,10 @@ export async function createPatient(formData: FormData) {
   await requireSession();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return;
+  const existentes = await fichasConNombre(name);
+  const conVisitas = existentes.filter((item) => (item.evolution ?? []).length > 0);
+  const existente = conVisitas[0] ?? existentes[0];
+  if (existente) redirect(`/consultorio/pacientes/${existente.id}`);
   const patient = await addPatientRecord(name);
   redirect(`/consultorio/pacientes/${patient.id}`);
 }

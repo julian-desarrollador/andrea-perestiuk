@@ -5,6 +5,11 @@ import { readStore } from "@/lib/consultorio/store";
 
 const doors = [
   {
+    href: "/consultorio/agenda",
+    title: "Agenda",
+    text: "Cargá los turnos del consultorio",
+  },
+  {
     href: "/consultorio/pacientes",
     title: "Pacientes",
     text: "Fichas, visitas y dientes",

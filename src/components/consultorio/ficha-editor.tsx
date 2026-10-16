@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { deletePatient, guardarFirma, savePatientFields } from "@/app/consultorio/actions";
+import { CalendarioCampo } from "@/components/consultorio/calendario-campo";
 import { consentSheets } from "@/lib/consultorio/consents";
 import { fechaDeInicio, fechaEnPalabras, todayInArgentina } from "@/lib/consultorio/fecha";
 import { allTeeth, toothMarks, type Patient, type ToothMark } from "@/lib/consultorio/types";
@@ -60,7 +62,7 @@ function draftOf(patient: Patient) {
   });
 }
 
-export function FichaEditor({ initial }: { initial: Patient }) {
+export function FichaEditor({ initial, volver }: { initial: Patient; volver: string }) {
   const [patient, setPatient] = useState(() => ready(initial));
   const [tab, setTab] = useState<Tab>("visitas");
   const [selected, setSelected] = useState<string | null>(null);
@@ -124,7 +126,10 @@ export function FichaEditor({ initial }: { initial: Patient }) {
 
   return (
     <div>
-      <h1 className="font-serif text-4xl text-forest md:text-5xl">{patient.name || "Sin nombre"}</h1>
+      <Link href={volver} scroll={false} aria-label="Atrás" className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-sand bg-white text-forest print:hidden">
+        <BackArrow />
+      </Link>
+      <h1 className="mt-3 font-serif text-4xl text-forest md:text-5xl">{patient.name || "Sin nombre"}</h1>
       <p className="mt-2 hidden text-muted print:block">Od. Andrea Perestiuk · Odontología</p>
       <div className="mt-6 grid grid-cols-4 gap-2 print:hidden" role="tablist">
         {tabs.map((item) => (
@@ -167,11 +172,11 @@ export function FichaEditor({ initial }: { initial: Patient }) {
           </label>
           <label className="block">
             Fecha de nacimiento
-            <input
-              type="date"
+            <CalendarioCampo
+              nacimiento
               value={patient.birthDate ?? ""}
-              onChange={(event) => setPatient({ ...patient, birthDate: event.target.value })}
-              className="mt-2 min-h-12 w-full rounded-xl border border-sand bg-white px-4 text-lg"
+              onChange={(birthDate) => setPatient({ ...patient, birthDate })}
+              className="mt-2"
             />
           </label>
           <label className="block">
@@ -294,7 +299,10 @@ export function FichaEditor({ initial }: { initial: Patient }) {
                     <button
                       key={tooth}
                       type="button"
-                      onClick={() => setSelected(tooth)}
+                      onClick={() => {
+                        setSelected(tooth);
+                        document.getElementById("marcas-pieza")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }}
                       aria-pressed={selected === tooth}
                       aria-label={`Pieza ${tooth}, ${markById[mark].label}`}
                       className={`flex min-h-12 flex-col overflow-hidden rounded-lg border bg-cream text-lg text-forest ${selected === tooth ? "border-forest ring-2 ring-forest" : "border-sand"}`}
@@ -309,7 +317,7 @@ export function FichaEditor({ initial }: { initial: Patient }) {
             </div>
           ))}
         </div>
-        <div className="mt-6 print:hidden">
+        <div id="marcas-pieza" className="mt-6 scroll-mt-4 print:hidden">
           <p className="text-forest">{selected ? `Pieza ${selected}` : "Tocá una pieza."}</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {toothMarks.map((mark) => (
@@ -414,5 +422,13 @@ export function FichaEditor({ initial }: { initial: Patient }) {
         )}
       </div>
     </div>
+  );
+}
+
+function BackArrow() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5M12 19l-7-7 7-7" />
+    </svg>
   );
 }

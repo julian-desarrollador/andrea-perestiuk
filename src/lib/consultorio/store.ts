@@ -1,6 +1,7 @@
 import { Binary, type Collection } from "mongodb";
 import { consultorioDb } from "./db";
 import { fechaDeInicio, isIsoDate, todayInArgentina } from "./fecha";
+import { claveNombre } from "./nombre";
 import { seedFees } from "./fees";
 import {
   allTeeth,
@@ -217,6 +218,14 @@ async function findPatient(id: string) {
   return doc ? plain(doc) : null;
 }
 
+export async function fichasConNombre(name: string) {
+  await prepare();
+  const clave = claveNombre(name);
+  if (clave.length < 2) return [];
+  const docs = await (await patients()).find({}, { projection: { _id: 0 } }).toArray();
+  return docs.map((item) => plain(item)).filter((item) => claveNombre(item.name) === clave);
+}
+
 function acceptedUpload(file: File) {
   if (file.size <= 0 || file.size > 5 * 1024 * 1024) {
     throw new Error("El archivo tiene que pesar menos de 5 MB.");
@@ -270,6 +279,25 @@ export function addPatientRecord(name: string) {
     await (await patients()).insertOne({ ...patient });
     return patient;
   });
+}
+
+export function addPatientWithContact(name: string, contact: string) {
+  return turn(async () => {
+    await prepare();
+    const patient = emptyPatient(name);
+    patient.contact = clip(contact, 200);
+    if (!patient.name) throw new Error("Completá el nombre.");
+    await (await patients()).insertOne({ ...patient });
+    return patient;
+  });
+}
+
+export async function setPatientContact(id: string, contact: string) {
+  await prepare();
+  await (await patients()).updateOne(
+    { id },
+    { $set: { contact: clip(contact, 200), updatedAt: new Date().toISOString() } },
+  );
 }
 
 export function savePatientRecord(input: unknown) {

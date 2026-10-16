@@ -61,6 +61,20 @@ body {
   unicode-range: U+0051;
 }
 
+.consultorio-ui :is(
+  button:not(:disabled),
+  select,
+  summary,
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="file"],
+  label:has(input[type="checkbox"]),
+  label:has(input[type="radio"]),
+  label:has(input[type="file"])
+) {
+  cursor: pointer;
+}
+
 #preguntas summary {
   font-family: "Q simple", var(--font-cormorant), serif;
 }

@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { logout } from "@/app/consultorio/actions";
+import { SalirButton } from "@/components/consultorio/salir-button";
 
 const links = [
   { href: "/consultorio", label: "Inicio", short: "Inicio", icon: "home" },
+  { href: "/consultorio/agenda", label: "Agenda", short: "Agenda", icon: "calendar" },
   { href: "/consultorio/pacientes", label: "Pacientes", short: "Pacientes", icon: "person" },
   { href: "/consultorio/prestaciones", label: "Mis precios", short: "Precios", icon: "tag" },
   { href: "/consultorio/consentimientos", label: "Hojas para firmar", short: "Firmar", icon: "sheet" },
@@ -30,6 +31,18 @@ function TabIcon({ name, filled }: { name: (typeof links)[number]["icon"]; fille
       <svg viewBox="0 0 24 24" aria-hidden="true" className={common} fill="none" stroke="currentColor" strokeWidth="1.75">
         <circle cx="12" cy="8" r="3.25" />
         <path strokeLinecap="round" d="M5.5 19.5v-.4c0-2.3 2.6-3.8 6.5-3.8s6.5 1.5 6.5 3.8v.4" />
+      </svg>
+    );
+  }
+  if (name === "calendar") {
+    return filled ? (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className={common}>
+        <path fill="currentColor" d="M7 2.8h2v2.2h6V2.8h2v2.2h2.2A1.8 1.8 0 0 1 21 6.8v12.4A1.8 1.8 0 0 1 19.2 21H4.8A1.8 1.8 0 0 1 3 19.2V6.8A1.8 1.8 0 0 1 4.8 5H7V2.8Zm12.2 7.4H4.8v9h14.4v-9Z" />
+      </svg>
+    ) : (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className={common} fill="none" stroke="currentColor" strokeWidth="1.75">
+        <rect x="3.8" y="4.8" width="16.4" height="15" rx="1.6" />
+        <path strokeLinecap="round" d="M8 3.2v3.2M16 3.2v3.2M3.8 9.2h16.4" />
       </svg>
     );
   }
@@ -74,11 +87,7 @@ export function ConsultorioShell({
             <Link href="/" className="hidden text-forest md:inline">
               Ver la página
             </Link>
-            <form action={logout}>
-              <button type="submit" className="inline-flex h-12 items-center text-forest">
-                Salir
-              </button>
-            </form>
+            <SalirButton />
           </div>
         </div>
         <nav aria-label="Consultorio" className="mx-auto mt-4 hidden max-w-6xl md:block">
@@ -102,7 +111,7 @@ export function ConsultorioShell({
         aria-label="Consultorio"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-sand bg-cream pb-[env(safe-area-inset-bottom)] print:hidden md:hidden"
       >
-        <ul className="grid grid-cols-4">
+        <ul className="grid grid-cols-5">
           {links.map((link) => {
             const active = current === link.href;
             return (
