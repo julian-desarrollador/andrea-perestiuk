@@ -32,6 +32,7 @@ export default async function AgendaPage({
         month={mes.month}
         dia={dia}
         canceladas={uno(query.canceladas) === "1"}
+        whatsappFallo={uno(query.whatsapp) === "no"}
         turnos={agenda.turnos}
         bloqueos={agenda.bloqueos}
       />

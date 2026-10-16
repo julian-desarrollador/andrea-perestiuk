@@ -230,7 +230,25 @@ export async function crearTurno(input: TurnoNuevo) {
     updatedAt: now,
   };
   await (await turnos()).insertOne({ ...turno });
-  return turno;
+  const whatsappEnviado = reminder ? await enviarAsignacion(turno) : true;
+  return { turno, whatsappEnviado };
+}
+
+async function enviarAsignacion(turno: Turno) {
+  const config = configTwilio(process.env.TWILIO_ASSIGNMENT_CONTENT_SID);
+  if (!config) return false;
+  try {
+    await enviarPlantilla({
+      ...config,
+      phone: turno.phone,
+      nombre: turno.patientName,
+      fecha: fechaCorta(turno.dateKey),
+      hora: turno.timeLocal,
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function minutosAHora(total: number) {
@@ -271,13 +289,19 @@ export async function quitarBloqueo(id: string) {
   await (await bloqueos()).deleteOne({ id });
 }
 
-export async function enviarRecordatorios(now = new Date()) {
+function configTwilio(contentSidValue: string | undefined) {
   const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim() ?? "";
   const authToken = process.env.TWILIO_AUTH_TOKEN?.trim() ?? "";
-  const contentSid = process.env.TWILIO_REMINDER_CONTENT_SID?.trim() ?? "";
+  const contentSid = contentSidValue?.trim() ?? "";
   const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID?.trim() ?? "";
   const from = process.env.TWILIO_WHATSAPP_FROM?.trim() ?? "";
-  if (!accountSid || !authToken || !contentSid || (!messagingServiceSid && !from)) {
+  if (!accountSid || !authToken || !contentSid || (!messagingServiceSid && !from)) return null;
+  return { accountSid, authToken, contentSid, messagingServiceSid, from };
+}
+
+export async function enviarRecordatorios(now = new Date()) {
+  const config = configTwilio(process.env.TWILIO_REMINDER_CONTENT_SID);
+  if (!config) {
     throw new Error("Falta configurar Twilio para el recordatorio.");
   }
 
@@ -312,11 +336,7 @@ export async function enviarRecordatorios(now = new Date()) {
     if (!claim) continue;
     try {
       await enviarPlantilla({
-        accountSid,
-        authToken,
-        contentSid,
-        messagingServiceSid,
-        from,
+        ...config,
         phone: turno.phone,
         nombre: turno.patientName,
         fecha: fechaCorta(turno.dateKey),
@@ -369,6 +389,6 @@ async function enviarPlantilla(input: {
     },
   );
   if (!response.ok) {
-    throw new Error("Twilio no envió el recordatorio.");
+    throw new Error("Twilio no envió el mensaje.");
   }
 }

@@ -19,6 +19,7 @@ export function AgendaVista({
   month,
   dia,
   canceladas,
+  whatsappFallo,
   turnos,
   bloqueos,
 }: {
@@ -26,6 +27,7 @@ export function AgendaVista({
   month: number;
   dia: string;
   canceladas: boolean;
+  whatsappFallo: boolean;
   turnos: Turno[];
   bloqueos: Bloqueo[];
 }) {
@@ -82,6 +84,12 @@ export function AgendaVista({
       <p className="text-xs font-bold uppercase tracking-widest text-muted">Consultorio</p>
       <h1 className="mt-1 font-serif text-4xl leading-none text-forest">Agenda</h1>
       <p className="mt-2 text-muted">Od. Andrea Perestiuk</p>
+
+      {whatsappFallo ? (
+        <p role="status" className="mt-5 rounded-2xl border border-[#6b2e2a] bg-white px-4 py-3 text-[#6b2e2a]">
+          El turno quedó guardado, pero no salió el WhatsApp.
+        </p>
+      ) : null}
 
       <div className="mt-5 grid grid-cols-2 gap-3">
         <Link

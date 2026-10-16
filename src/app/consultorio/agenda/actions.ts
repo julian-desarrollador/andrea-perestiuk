@@ -50,8 +50,9 @@ export async function guardarTurno(input: {
 }): Promise<{ error: string }> {
   await requireSession();
   try {
-    const turno = await crearTurno(input);
-    redirect(hrefAgenda(mesDe(turno.dateKey), turno.dateKey));
+    const { turno, whatsappEnviado } = await crearTurno(input);
+    const destino = hrefAgenda(mesDe(turno.dateKey), turno.dateKey);
+    redirect(whatsappEnviado ? destino : `${destino}&whatsapp=no`);
   } catch (error) {
     if (esRedirect(error)) throw error;
     return { error: error instanceof Error ? error.message : "No se pudo guardar el turno." };
