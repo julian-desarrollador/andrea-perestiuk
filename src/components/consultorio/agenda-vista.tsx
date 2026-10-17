@@ -214,14 +214,19 @@ export function AgendaVista({
                 {fila.turno.status === "cancelled" ? <p className="mt-1 text-[#6b2e2a]">Cancelada</p> : null}
                 <p className="mt-3 text-forest">{fila.turno.reason}</p>
                 <p className="mt-3 rounded-xl border border-sand bg-cream px-3 py-2.5 text-forest">
-                  Recordatorio 24h:{" "}
-                  {fila.turno.status === "cancelled"
-                    ? "No se envía"
-                    : !fila.turno.reminder
-                      ? "Sin recordatorio"
-                      : fila.turno.waReminder24hSentAt
-                        ? "Enviado"
-                        : "Aún no enviado"}
+                  <span className="block">
+                    Asignación de turno: {fila.turno.status === "cancelled" ? "No se envía" : fila.turno.waAssignmentSentAt ? "Enviada" : "No enviada"}
+                  </span>
+                  <span className="mt-1 block">
+                    Recordatorio 24h:{" "}
+                    {fila.turno.status === "cancelled"
+                      ? "No se envía"
+                      : !fila.turno.reminder
+                        ? "Sin recordatorio"
+                        : fila.turno.waReminder24hSentAt
+                          ? "Enviado"
+                          : "Aún no enviado"}
+                  </span>
                 </p>
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t border-sand pt-4">
                   <Link

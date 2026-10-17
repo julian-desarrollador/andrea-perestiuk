@@ -29,6 +29,7 @@ export type Turno = {
   reason: string;
   status: TurnoEstado;
   reminder: boolean;
+  waAssignmentSentAt: string | null;
   waReminder24hSentAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -225,12 +226,17 @@ export async function crearTurno(input: TurnoNuevo) {
     reason: clip(input.reason, 180) || "Consulta",
     status: "confirmed",
     reminder,
+    waAssignmentSentAt: null,
     waReminder24hSentAt: null,
     createdAt: now,
     updatedAt: now,
   };
   await (await turnos()).insertOne({ ...turno });
   const whatsappEnviado = reminder ? await enviarAsignacion(turno) : true;
+  if (whatsappEnviado && reminder) {
+    turno.waAssignmentSentAt = new Date().toISOString();
+    await (await turnos()).updateOne({ id: turno.id }, { $set: { waAssignmentSentAt: turno.waAssignmentSentAt } });
+  }
   return { turno, whatsappEnviado };
 }
 
