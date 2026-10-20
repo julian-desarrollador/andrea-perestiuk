@@ -39,6 +39,14 @@ export type SignedConsent = {
   mime?: string;
 };
 
+export type ChartFile = {
+  id: string;
+  fileId: string;
+  fileName: string;
+  mime: string;
+  addedOn: string;
+};
+
 export type Patient = {
   id: string;
   name: string;
@@ -53,6 +61,7 @@ export type Patient = {
   evolution: Evolution[];
   teeth: Partial<Record<string, ToothMark>>;
   consents: SignedConsent[];
+  files: ChartFile[];
   updatedAt: string;
 };
 

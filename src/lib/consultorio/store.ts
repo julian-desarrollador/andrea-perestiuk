@@ -9,6 +9,7 @@ import {
   type ConsentKind,
   type Evolution,
   type FeeItem,
+  type ChartFile,
   type Patient,
   type SignedConsent,
   type Store,
@@ -60,6 +61,7 @@ export function emptyPatient(name: string): Patient {
     evolution: [],
     teeth: {},
     consents: [],
+    files: [],
     updatedAt: new Date().toISOString(),
   };
 }
@@ -129,6 +131,7 @@ export function sanitizePatient(input: unknown): Patient | null {
     evolution,
     teeth: toothMap,
     consents,
+    files: [],
     updatedAt: new Date().toISOString(),
   };
 }
@@ -215,7 +218,9 @@ export async function readStore(): Promise<Store> {
 
 async function findPatient(id: string) {
   const doc = await (await patients()).findOne({ id }, { projection: { _id: 0 } });
-  return doc ? plain(doc) : null;
+  if (!doc) return null;
+  const patient = plain(doc);
+  return { ...patient, consents: patient.consents ?? [], files: patient.files ?? [] };
 }
 
 export async function fichasConNombre(name: string) {
@@ -224,6 +229,38 @@ export async function fichasConNombre(name: string) {
   if (clave.length < 2) return [];
   const docs = await (await patients()).find({}, { projection: { _id: 0 } }).toArray();
   return docs.map((item) => plain(item)).filter((item) => claveNombre(item.name) === clave);
+}
+
+const chartMimes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+
+function acceptedChartFile(file: File) {
+  if (file.size <= 0 || file.size > 5 * 1024 * 1024) {
+    throw new Error("El archivo tiene que pesar menos de 5 MB.");
+  }
+  const name = file.name.toLowerCase();
+  const fromName = name.endsWith(".png")
+    ? "image/png"
+    : name.endsWith(".webp")
+      ? "image/webp"
+      : name.endsWith(".pdf")
+        ? "application/pdf"
+        : name.endsWith(".docx")
+          ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          : name.endsWith(".doc")
+            ? "application/msword"
+            : name.endsWith(".jpg") || name.endsWith(".jpeg")
+              ? "image/jpeg"
+              : "";
+  const mime = chartMimes.has(file.type) ? file.type : fromName;
+  if (!mime) throw new Error("El archivo tiene que ser una imagen, un PDF o un Word.");
+  return mime;
 }
 
 function acceptedUpload(file: File) {
@@ -249,8 +286,8 @@ function isFileId(fileId: string) {
   return /^[0-9a-f-]{36}$/i.test(fileId);
 }
 
-async function saveUpload(file: File) {
-  const mime = acceptedUpload(file);
+async function saveUpload(file: File, accept: (file: File) => string = acceptedUpload) {
+  const mime = accept(file);
   const id = crypto.randomUUID();
   const bytes = Buffer.from(await file.arrayBuffer());
   await (await adjuntos()).insertOne({ id, mime, data: new Binary(bytes) });
@@ -307,11 +344,13 @@ export function savePatientRecord(input: unknown) {
     if (!incoming) throw new Error("Completá el nombre.");
     const current = await findPatient(incoming.id);
     if (!current) throw new Error("No encontré esta ficha.");
+    const latest = await findPatient(incoming.id);
     const next: Patient = {
       ...incoming,
       startedOn: isIsoDate(current.startedOn) ? current.startedOn : incoming.startedOn,
       evolution: mergeVisits(current.evolution ?? [], incoming.evolution, todayInArgentina()),
-      consents: current.consents,
+      consents: latest?.consents ?? current.consents,
+      files: latest?.files ?? current.files ?? [],
     };
     await (await patients()).replaceOne({ id: next.id }, { ...next });
     return next;
@@ -357,12 +396,57 @@ export function saveSignature(patientId: string, kind: ConsentKind, file: File) 
   });
 }
 
+export function addChartFile(patientId: string, file: File) {
+  return turn(async () => {
+    await prepare();
+    const patient = await findPatient(patientId);
+    if (!patient) throw new Error("No encontré esta ficha.");
+    if (patient.files.length >= 40) throw new Error("Esta ficha ya tiene muchos archivos.");
+    const uploaded = await saveUpload(file, acceptedChartFile);
+    const chartFile: ChartFile = {
+      id: crypto.randomUUID(),
+      fileId: uploaded.fileId,
+      fileName: uploaded.fileName,
+      mime: uploaded.mime,
+      addedOn: todayInArgentina(),
+    };
+    const next: Patient = {
+      ...patient,
+      files: [chartFile, ...patient.files],
+      updatedAt: new Date().toISOString(),
+    };
+    await (await patients()).replaceOne({ id: patientId }, { ...next });
+    return next;
+  });
+}
+
+export function removeChartFile(patientId: string, fileId: string) {
+  return turn(async () => {
+    await prepare();
+    const patient = await findPatient(patientId);
+    if (!patient) throw new Error("No encontré esta ficha.");
+    const target = patient.files.find((item) => item.id === fileId);
+    if (!target) throw new Error("No encontré este archivo.");
+    await removeUploads([target.fileId]);
+    const next: Patient = {
+      ...patient,
+      files: patient.files.filter((item) => item.id !== fileId),
+      updatedAt: new Date().toISOString(),
+    };
+    await (await patients()).replaceOne({ id: patientId }, { ...next });
+    return next;
+  });
+}
+
 export function removePatientRecord(id: string) {
   return turn(async () => {
     await prepare();
     const current = await findPatient(id);
     if (current) {
-      await removeUploads(current.consents.flatMap((item) => (item.fileId ? [item.fileId] : [])));
+      await removeUploads([
+        ...current.consents.flatMap((item) => (item.fileId ? [item.fileId] : [])),
+        ...current.files.map((item) => item.fileId),
+      ]);
     }
     await (await patients()).deleteOne({ id });
   });

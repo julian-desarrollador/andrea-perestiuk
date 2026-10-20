@@ -2,16 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { deletePatient, guardarFirma, savePatientFields } from "@/app/consultorio/actions";
+import { deletePatient, guardarFirma, quitarArchivoFicha, savePatientFields, subirArchivoFicha } from "@/app/consultorio/actions";
 import { CalendarioCampo } from "@/components/consultorio/calendario-campo";
+import { Confirmacion } from "@/components/consultorio/confirmacion";
 import { consentSheets } from "@/lib/consultorio/consents";
 import { fechaDeInicio, fechaEnPalabras, todayInArgentina } from "@/lib/consultorio/fecha";
-import { allTeeth, toothMarks, type Patient, type ToothMark } from "@/lib/consultorio/types";
+import { allTeeth, toothMarks, type ChartFile, type Patient, type ToothMark } from "@/lib/consultorio/types";
 
 const tabs = [
   { id: "datos", label: "Datos" },
   { id: "visitas", label: "Visitas" },
   { id: "dientes", label: "Dientes" },
+  { id: "archivos", label: "Archivos" },
   { id: "firmas", label: "Firmas" },
 ] as const;
 
@@ -43,6 +45,7 @@ function ready(patient: Patient): Patient {
     evolution: patient.evolution ?? [],
     teeth: patient.teeth ?? {},
     consents: patient.consents ?? [],
+    files: patient.files ?? [],
   };
 }
 
@@ -69,11 +72,47 @@ export function FichaEditor({ initial, volver }: { initial: Patient; volver: str
   const [notice, setNotice] = useState("");
   const [confirmName, setConfirmName] = useState("");
   const [askDelete, setAskDelete] = useState(false);
+  const [quitar, setQuitar] = useState<string | null>(null);
+  const [foto, setFoto] = useState<ChartFile | null>(null);
   const saved = useRef(draftOf(ready(initial)));
   const latest = useRef(draftOf(ready(initial)));
 
   const draft = draftOf(patient);
   latest.current = draft;
+
+  useEffect(() => {
+    if (!foto) return;
+    const y = window.scrollY;
+    const body = document.body;
+    const previo = {
+      overflow: body.style.overflow,
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+    };
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${y}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setFoto(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => {
+      body.style.overflow = previo.overflow;
+      body.style.position = previo.position;
+      body.style.top = previo.top;
+      body.style.left = previo.left;
+      body.style.right = previo.right;
+      body.style.width = previo.width;
+      window.scrollTo({ top: y, behavior: "instant" });
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [foto]);
 
   useEffect(() => {
     if (draft === saved.current) return;
@@ -122,6 +161,34 @@ export function FichaEditor({ initial, volver }: { initial: Patient; volver: str
     setNotice("Guardado");
   }
 
+  async function onFile(file: File) {
+    setNotice("Guardando…");
+    const data = new FormData();
+    data.set("patientId", patient.id);
+    data.set("file", file);
+    const result = await subirArchivoFicha(data);
+    if ("error" in result) {
+      setNotice(result.error);
+      return;
+    }
+    setPatient(result.patient);
+    saved.current = draftOf(result.patient);
+    setNotice("Guardado");
+  }
+
+  async function onQuitar(fileId: string) {
+    setQuitar(null);
+    setNotice("Guardando…");
+    const result = await quitarArchivoFicha(patient.id, fileId);
+    if ("error" in result) {
+      setNotice(result.error);
+      return;
+    }
+    setPatient(result.patient);
+    saved.current = draftOf(result.patient);
+    setNotice("Guardado");
+  }
+
   const selectedMark = selected ? (patient.teeth[selected] ?? "sana") : null;
 
   return (
@@ -131,7 +198,7 @@ export function FichaEditor({ initial, volver }: { initial: Patient; volver: str
       </Link>
       <h1 className="mt-3 font-serif text-4xl text-forest md:text-5xl">{patient.name || "Sin nombre"}</h1>
       <p className="mt-2 hidden text-muted print:block">Od. Andrea Perestiuk · Odontología</p>
-      <div className="mt-6 grid grid-cols-4 gap-2 print:hidden" role="tablist">
+      <div className="mt-6 grid grid-cols-3 gap-2 print:hidden sm:grid-cols-5" role="tablist">
         {tabs.map((item) => (
           <button
             key={item.id}
@@ -346,6 +413,50 @@ export function FichaEditor({ initial, volver }: { initial: Patient; volver: str
         </ul>
       </section>
 
+      <section className={tab === "archivos" ? "mt-8 print:hidden" : "hidden"}>
+        <h2 className="font-serif text-3xl">Archivos</h2>
+        <p className="mt-3 text-forest">Una imagen, un PDF o un Word. Hasta 5 MB.</p>
+        <label className="mt-6 inline-flex h-12 cursor-pointer items-center justify-center rounded-full bg-forest px-5 text-lg text-cream">
+          Subir archivo
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="sr-only"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (file) void onFile(file);
+            }}
+          />
+        </label>
+        {patient.files.length === 0 ? (
+          <p className="mt-6 text-muted">Todavía no hay archivos.</p>
+        ) : (
+          <ul className="mt-6 space-y-4">
+            {patient.files.map((file) => (
+              <li key={file.id} className="rounded-2xl border border-sand bg-white p-4">
+                <p className="font-semibold text-forest">{file.fileName}</p>
+                <p className="mt-1 text-muted">{fechaEnPalabras(file.addedOn)}</p>
+                <div className="mt-4 flex items-center justify-between gap-4">
+                  {esImagen(file) ? (
+                    <button type="button" className="inline-flex h-12 items-center justify-center rounded-full bg-forest px-5 text-cream" onClick={() => setFoto(file)}>
+                      Abrir
+                    </button>
+                  ) : (
+                    <a className="inline-flex h-12 items-center justify-center rounded-full bg-forest px-5 text-cream" href={`/consultorio/archivo/${file.fileId}`}>
+                      {esWord(file) ? "Descargar" : "Abrir"}
+                    </a>
+                  )}
+                  <button type="button" className="text-[#6b2e2a]" onClick={() => setQuitar(file.id)}>
+                    Quitar
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <section className={tab === "firmas" ? "mt-8" : "mt-8 hidden print:block"}>
         <h2 className="font-serif text-3xl">Firmas</h2>
         <p className="mt-3 text-forest print:hidden">Imprimí la hoja, la firman en papel y subí la foto.</p>
@@ -421,8 +532,46 @@ export function FichaEditor({ initial, volver }: { initial: Patient; volver: str
           </button>
         )}
       </div>
+      {quitar ? (
+        <Confirmacion
+          title="Quitar archivo"
+          text="Se borra de la ficha."
+          confirm="Sí, quitar"
+          onConfirm={() => void onQuitar(quitar)}
+          onClose={() => setQuitar(null)}
+        />
+      ) : null}
+      {foto ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-forest/40 px-4 py-6" onClick={() => setFoto(null)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="foto-titulo"
+            className="max-h-full w-full max-w-3xl overflow-y-auto rounded-[22px] border border-sand bg-white p-5"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <h2 id="foto-titulo" className="font-serif text-3xl leading-tight text-forest">
+                {foto.fileName}
+              </h2>
+              <button type="button" className="h-12 shrink-0 px-2 text-forest" onClick={() => setFoto(null)}>
+                Cerrar
+              </button>
+            </div>
+            <img src={`/consultorio/archivo/${foto.fileId}`} alt={foto.fileName} className="mt-4 w-full rounded-xl" />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
+}
+
+function esImagen(file: ChartFile) {
+  return file.mime.startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(file.fileName);
+}
+
+function esWord(file: ChartFile) {
+  return file.mime.includes("word") || /\.docx?$/i.test(file.fileName);
 }
 
 function BackArrow() {

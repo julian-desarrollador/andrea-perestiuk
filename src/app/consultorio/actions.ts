@@ -9,8 +9,10 @@ import {
 } from "@/lib/consultorio/guard";
 import { sameSecret, sessionCookie, sessionToken } from "@/lib/consultorio/session";
 import {
+  addChartFile,
   addPatientRecord,
   fichasConNombre,
+  removeChartFile,
   removePatientRecord,
   saveFeeRecord,
   savePatientRecord,
@@ -73,6 +75,31 @@ export async function guardarFirma(formData: FormData): Promise<{ error: string 
     return { patient };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "No se pudo guardar la foto." };
+  }
+}
+
+export async function subirArchivoFicha(formData: FormData): Promise<{ error: string } | { patient: Patient }> {
+  await requireSession();
+  const patientId = String(formData.get("patientId") ?? "");
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "No llegó el archivo." };
+  }
+  try {
+    const patient = await addChartFile(patientId, file);
+    return { patient };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No se pudo guardar el archivo." };
+  }
+}
+
+export async function quitarArchivoFicha(patientId: string, fileId: string): Promise<{ error: string } | { patient: Patient }> {
+  await requireSession();
+  try {
+    const patient = await removeChartFile(patientId, fileId);
+    return { patient };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No se pudo quitar el archivo." };
   }
 }
 

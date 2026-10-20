@@ -10,16 +10,28 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   const consent = store.patients
     .flatMap((patient) => patient.consents)
     .find((item) => item.fileId === id);
-  if (!consent) return new Response("No encontrado", { status: 404 });
+  const chartFile = store.patients
+    .flatMap((patient) => patient.files ?? [])
+    .find((item) => item.fileId === id);
+  const mime = consent?.mime || chartFile?.mime;
+  const fileName = consent?.fileName || chartFile?.fileName;
+  if (!consent && !chartFile) return new Response("No encontrado", { status: 404 });
 
   const bytes = await readUpload(id);
   if (!bytes) return new Response("No encontrado", { status: 404 });
 
   return new Response(new Uint8Array(bytes), {
     headers: {
-      "Content-Type": consent.mime || "application/octet-stream",
-      "Content-Disposition": "inline",
+      "Content-Type": mime || "application/octet-stream",
+      "Content-Disposition": disposition(fileName ?? "", mime ?? ""),
       "Cache-Control": "private, no-store",
     },
   });
+}
+
+function disposition(fileName: string, mime: string) {
+  const word = mime === "application/msword" || mime.includes("wordprocessingml");
+  if (!word) return "inline";
+  const clean = fileName.replace(/["\r\n\\]/g, "") || "archivo";
+  return `attachment; filename="${clean}"`;
 }
