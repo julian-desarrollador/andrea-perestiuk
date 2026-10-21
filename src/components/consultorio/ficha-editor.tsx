@@ -443,7 +443,11 @@ export function FichaEditor({ initial, volver }: { initial: Patient; volver: str
                       Abrir
                     </button>
                   ) : (
-                    <a className="inline-flex h-12 items-center justify-center rounded-full bg-forest px-5 text-cream" href={`/consultorio/archivo/${file.fileId}`}>
+                    <a
+                      className="inline-flex h-12 items-center justify-center rounded-full bg-forest px-5 text-cream"
+                      href={`/consultorio/archivo/${file.fileId}`}
+                      {...(esWord(file) ? {} : { target: "_blank", rel: "noopener noreferrer" })}
+                    >
                       {esWord(file) ? "Descargar" : "Abrir"}
                     </a>
                   )}
