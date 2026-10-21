@@ -241,8 +241,8 @@ const chartMimes = new Set([
 ]);
 
 function acceptedChartFile(file: File) {
-  if (file.size <= 0 || file.size > 5 * 1024 * 1024) {
-    throw new Error("El archivo tiene que pesar menos de 5 MB.");
+  if (file.size <= 0 || file.size > 4 * 1024 * 1024) {
+    throw new Error("El archivo tiene que pesar menos de 4 MB.");
   }
   const name = file.name.toLowerCase();
   const fromName = name.endsWith(".png")
@@ -264,8 +264,8 @@ function acceptedChartFile(file: File) {
 }
 
 function acceptedUpload(file: File) {
-  if (file.size <= 0 || file.size > 5 * 1024 * 1024) {
-    throw new Error("El archivo tiene que pesar menos de 5 MB.");
+  if (file.size <= 0 || file.size > 4 * 1024 * 1024) {
+    throw new Error("El archivo tiene que pesar menos de 4 MB.");
   }
   const allowed = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
   let mime = file.type;

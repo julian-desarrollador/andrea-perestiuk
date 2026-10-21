@@ -146,34 +146,50 @@ export function FichaEditor({ initial, volver }: { initial: Patient; volver: str
   }
 
   async function onPhoto(kind: Patient["consents"][number]["kind"], file: File) {
+    if (file.size > 4 * 1024 * 1024) {
+      setNotice("El archivo tiene que pesar menos de 4 MB.");
+      return;
+    }
     setNotice("Guardando…");
     const data = new FormData();
     data.set("patientId", patient.id);
     data.set("kind", kind);
     data.set("scan", file);
-    const result = await guardarFirma(data);
-    if ("error" in result) {
-      setNotice(result.error);
-      return;
+    try {
+      const result = await guardarFirma(data);
+      if ("error" in result) {
+        setNotice(result.error);
+        return;
+      }
+      setPatient(result.patient);
+      saved.current = draftOf(result.patient);
+      setNotice("Guardado");
+    } catch {
+      setNotice("No se pudo subir el archivo. Probá de nuevo.");
     }
-    setPatient(result.patient);
-    saved.current = draftOf(result.patient);
-    setNotice("Guardado");
   }
 
   async function onFile(file: File) {
+    if (file.size > 4 * 1024 * 1024) {
+      setNotice("El archivo tiene que pesar menos de 4 MB.");
+      return;
+    }
     setNotice("Guardando…");
     const data = new FormData();
     data.set("patientId", patient.id);
     data.set("file", file);
-    const result = await subirArchivoFicha(data);
-    if ("error" in result) {
-      setNotice(result.error);
-      return;
+    try {
+      const result = await subirArchivoFicha(data);
+      if ("error" in result) {
+        setNotice(result.error);
+        return;
+      }
+      setPatient(result.patient);
+      saved.current = draftOf(result.patient);
+      setNotice("Guardado");
+    } catch {
+      setNotice("No se pudo subir el archivo. Probá de nuevo.");
     }
-    setPatient(result.patient);
-    saved.current = draftOf(result.patient);
-    setNotice("Guardado");
   }
 
   async function onQuitar(fileId: string) {
@@ -415,7 +431,7 @@ export function FichaEditor({ initial, volver }: { initial: Patient; volver: str
 
       <section className={tab === "archivos" ? "mt-8 print:hidden" : "hidden"}>
         <h2 className="font-serif text-3xl">Archivos</h2>
-        <p className="mt-3 text-forest">Una imagen, un PDF o un Word. Hasta 5 MB.</p>
+        <p className="mt-3 text-forest">Una imagen, un PDF o un Word. Hasta 4 MB.</p>
         <label className="mt-6 inline-flex h-12 cursor-pointer items-center justify-center rounded-full bg-forest px-5 text-lg text-cream">
           Subir archivo
           <input
