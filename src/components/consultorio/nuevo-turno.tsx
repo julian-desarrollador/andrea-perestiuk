@@ -18,6 +18,7 @@ import {
   pisaTramo,
   telefonoValido,
   terminaDespuesDeLas20,
+  textoSobreturno,
   tituloMes,
   type Tramo,
 } from "@/lib/consultorio/agenda-horario";
@@ -45,7 +46,10 @@ export function NuevoTurno({ dia }: { dia: string }) {
   const [phone, setPhone] = useState("");
   const [dateKey, setDateKey] = useState("");
   const [timeLocal, setTimeLocal] = useState("");
+  const [sobreturno, setSobreturno] = useState(false);
   const [horaLibre, setHoraLibre] = useState<string | null>(null);
+  const [sobrePendiente, setSobrePendiente] = useState(false);
+  const [avisoSobre, setAvisoSobre] = useState<{ hora: string; duracion?: number } | null>(null);
   const [duration, setDuration] = useState(15);
   const [otra, setOtra] = useState(false);
   const [minutosOtra, setMinutosOtra] = useState("");
@@ -86,11 +90,12 @@ export function NuevoTurno({ dia }: { dia: string }) {
   }, [dateKey]);
 
   useEffect(() => {
+    if (sobreturno) return;
     if (timeLocal && pisaTramo(timeLocal, 15, tramos)) {
       setTimeLocal("");
       setError("Ese horario ya está ocupado.");
     }
-  }, [timeLocal, tramos]);
+  }, [timeLocal, tramos, sobreturno]);
 
   useEffect(() => {
     if (step !== 3) return;
@@ -116,7 +121,10 @@ export function NuevoTurno({ dia }: { dia: string }) {
   }, [fichas, query, step]);
 
   function aplicarDia(next: string) {
-    if (next !== dateKey) setTimeLocal("");
+    if (next !== dateKey) {
+      setTimeLocal("");
+      setSobreturno(false);
+    }
     setDateKey(next);
     setError("");
     bajarAContinuar();
@@ -137,8 +145,9 @@ export function NuevoTurno({ dia }: { dia: string }) {
     aplicarDia(next);
   }
 
-  function aplicarHora(hora: string) {
+  function aplicarHora(hora: string, esSobre: boolean) {
     setTimeLocal(hora);
+    setSobreturno(esSobre);
     setError("");
     bajarAContinuar();
   }
@@ -151,21 +160,48 @@ export function NuevoTurno({ dia }: { dia: string }) {
       return;
     }
     if (pisaTramo(hora, 15, tramos)) {
-      setError("Ese horario ya está ocupado.");
+      setError("");
+      setAvisoSobre({ hora });
       return;
     }
     if (!caeCadaQuince(hora)) {
+      setSobrePendiente(false);
       setHoraLibre(hora);
       return;
     }
-    aplicarHora(hora);
+    aplicarHora(hora, false);
   }
 
   function confirmarHoraLibre() {
     if (!horaLibre) return;
     const hora = horaLibre;
+    const esSobre = sobrePendiente;
     setHoraLibre(null);
-    aplicarHora(hora);
+    setSobrePendiente(false);
+    aplicarHora(hora, esSobre);
+  }
+
+  function confirmarSobreturno() {
+    if (!avisoSobre) return;
+    const { hora, duracion } = avisoSobre;
+    setAvisoSobre(null);
+    setError("");
+    if (duracion != null) {
+      setSobreturno(true);
+      if (terminaDespuesDeLas20(hora, duracion) && aceptado20 !== `${hora}|${duracion}`) {
+        setAviso20(duracion);
+        return;
+      }
+      setDuration(duracion);
+      setStep(5);
+      return;
+    }
+    if (!caeCadaQuince(hora)) {
+      setSobrePendiente(true);
+      setHoraLibre(hora);
+      return;
+    }
+    aplicarHora(hora, true);
   }
 
   function mesAnterior() {
@@ -212,8 +248,8 @@ export function NuevoTurno({ dia }: { dia: string }) {
         setError("La duración tiene que ser entre 5 y 240 minutos.");
         return;
       }
-      if (pisaTramo(timeLocal, elegida, tramos)) {
-        setError("Ese horario ya está ocupado.");
+      if (!sobreturno && pisaTramo(timeLocal, elegida, tramos)) {
+        setAvisoSobre({ hora: timeLocal, duracion: elegida });
         return;
       }
       if (terminaDespuesDeLas20(timeLocal, elegida) && aceptado20 !== `${timeLocal}|${elegida}`) {
@@ -245,6 +281,7 @@ export function NuevoTurno({ dia }: { dia: string }) {
       durationMinutes: duration,
       reason,
       reminder,
+      sobreturno,
     });
     if (result?.error) {
       setError(result.error);
@@ -331,13 +368,20 @@ export function NuevoTurno({ dia }: { dia: string }) {
           <div className="mt-6 grid grid-cols-2 gap-3">
             {horariosDeInicio().map((hora) => {
               const ocupada = pisaTramo(hora, 15, tramos);
+              const selected = timeLocal === hora;
               return (
                 <button
                   key={hora}
                   type="button"
-                  disabled={ocupada}
-                  onClick={() => aplicarHora(hora)}
-                  className={`h-12 rounded-xl border text-lg font-semibold disabled:cursor-default disabled:border-sand disabled:bg-panel disabled:text-muted disabled:opacity-50 ${timeLocal === hora ? "border-forest bg-forest text-cream" : "border-sand bg-white text-forest"}`}
+                  onClick={() => {
+                    if (ocupada) {
+                      setError("");
+                      setAvisoSobre({ hora });
+                      return;
+                    }
+                    aplicarHora(hora, false);
+                  }}
+                  className={`h-12 rounded-xl border text-lg font-semibold ${selected ? "border-forest bg-forest text-cream" : ocupada ? "border-sand bg-panel text-muted" : "border-sand bg-white text-forest"}`}
                 >
                   {hora}
                 </button>
@@ -471,6 +515,12 @@ export function NuevoTurno({ dia }: { dia: string }) {
                 {diaDeSemana(dateKey)} {diaCorto(dateKey)} · {timeLocal}
               </dd>
             </div>
+            {sobreturno ? (
+              <div>
+                <dt className="text-muted">Tipo</dt>
+                <dd>Sobreturno</dd>
+              </div>
+            ) : null}
             <div>
               <dt className="text-muted">Duración</dt>
               <dd>{duracionEnPalabras(duration)}</dd>
@@ -529,8 +579,20 @@ export function NuevoTurno({ dia }: { dia: string }) {
           title="Este horario no es cada 15 minutos"
           text="¿Segura que querés usarlo?"
           confirm="Sí, usarlo"
-          onClose={() => setHoraLibre(null)}
+          onClose={() => {
+            setHoraLibre(null);
+            setSobrePendiente(false);
+          }}
           onConfirm={confirmarHoraLibre}
+        />
+      ) : null}
+      {avisoSobre ? (
+        <Confirmacion
+          title="Agendar sobreturno"
+          text={textoSobreturno(avisoSobre.hora, avisoSobre.duracion ?? 15, tramos) ?? "¿Lo agendás como sobreturno?"}
+          confirm="Sí, agendar sobreturno"
+          onClose={() => setAvisoSobre(null)}
+          onConfirm={confirmarSobreturno}
         />
       ) : null}
       {aviso20 != null ? (
@@ -538,7 +600,10 @@ export function NuevoTurno({ dia }: { dia: string }) {
           title="Termina después de las 20:00"
           text="Este turno termina después de las 20:00. ¿Segura que querés dejarlo?"
           confirm="Sí, dejarlo"
-          onClose={() => setAviso20(null)}
+          onClose={() => {
+            setAviso20(null);
+            if (!pisaTramo(timeLocal, 15, tramos)) setSobreturno(false);
+          }}
           onConfirm={confirmarDespuesDe20}
         />
       ) : null}

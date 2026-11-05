@@ -54,12 +54,24 @@ export function sePisan(start: number, end: number, otherStart: number, otherEnd
   return start < otherEnd && otherStart < end;
 }
 
-export type Tramo = { start: number; end: number };
+export type Tramo = { start: number; end: number; kind: "turno" | "bloqueo" };
 
 export function pisaTramo(inicio: string, duracion: number, tramos: Tramo[]) {
   const start = minutos(inicio);
   if (start == null) return false;
   return tramos.some((tramo) => sePisan(start, start + duracion, tramo.start, tramo.end));
+}
+
+export function textoSobreturno(inicio: string, duracion: number, tramos: Tramo[]) {
+  const start = minutos(inicio);
+  if (start == null) return null;
+  const pisa = tramos.filter((tramo) => sePisan(start, start + duracion, tramo.start, tramo.end));
+  const turno = pisa.some((tramo) => tramo.kind === "turno");
+  const bloqueo = pisa.some((tramo) => tramo.kind === "bloqueo");
+  if (turno && bloqueo) return "Esta hora tiene un turno y está bloqueada. ¿La agendás como sobreturno?";
+  if (bloqueo) return "Esta hora está bloqueada. ¿La agendás como sobreturno?";
+  if (turno) return "A esta hora ya hay un turno. ¿Lo agendás como sobreturno?";
+  return null;
 }
 
 export function terminaDespuesDeLas20(inicio: string, duracion: number) {

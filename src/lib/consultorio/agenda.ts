@@ -29,6 +29,7 @@ export type Turno = {
   reason: string;
   status: TurnoEstado;
   reminder: boolean;
+  sobreturno?: boolean;
   waAssignmentSentAt: string | null;
   waReminder24hSentAt: string | null;
   createdAt: string;
@@ -52,6 +53,7 @@ export type TurnoNuevo = {
   durationMinutes: number;
   reason: string;
   reminder: boolean;
+  sobreturno: boolean;
 };
 
 type PacienteCorto = { id: string; name: string; contact: string };
@@ -181,7 +183,8 @@ export async function crearTurno(input: TurnoNuevo) {
   if (input.reminder && !telefonoValido(phone)) throw new Error("Revisá el teléfono para el recordatorio.");
   const start = minutos(timeLocal);
   if (start == null) throw new Error("Revisá el horario.");
-  await assertLibre(dateKey, timeLocal, minutosAHora(start + duration));
+  const sobreturno = input.sobreturno === true;
+  if (!sobreturno) await assertLibre(dateKey, timeLocal, minutosAHora(start + duration));
 
   let patientId = input.patientId.trim();
   let patientName = clip(input.name, 120);
@@ -226,6 +229,7 @@ export async function crearTurno(input: TurnoNuevo) {
     reason: clip(input.reason, 180) || "Consulta",
     status: "confirmed",
     reminder,
+    sobreturno,
     waAssignmentSentAt: null,
     waReminder24hSentAt: null,
     createdAt: now,

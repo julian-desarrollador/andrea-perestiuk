@@ -27,13 +27,13 @@ export async function ocupacionDelDia(dateKey: string): Promise<Tramo[]> {
     if (turno.status !== "confirmed") continue;
     const start = minutos(turno.timeLocal);
     if (start == null) continue;
-    tramos.push({ start, end: start + turno.durationMinutes });
+    tramos.push({ start, end: start + turno.durationMinutes, kind: "turno" });
   }
   for (const bloqueo of agenda.bloqueos) {
     const start = minutos(bloqueo.start);
     const end = minutos(bloqueo.end);
     if (start == null || end == null) continue;
-    tramos.push({ start, end });
+    tramos.push({ start, end, kind: "bloqueo" });
   }
   return tramos;
 }
@@ -47,6 +47,7 @@ export async function guardarTurno(input: {
   durationMinutes: number;
   reason: string;
   reminder: boolean;
+  sobreturno: boolean;
 }): Promise<{ error: string }> {
   await requireSession();
   try {

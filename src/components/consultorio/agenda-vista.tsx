@@ -207,7 +207,10 @@ export function AgendaVista({
                 className={`rounded-[22px] border border-sand bg-white p-5 ${fila.turno.status === "cancelled" ? "opacity-70" : ""}`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <p className="text-lg font-semibold text-forest">{fila.turno.timeLocal}</p>
+                  <div>
+                    <p className="text-lg font-semibold text-forest">{fila.turno.timeLocal}</p>
+                    {fila.turno.sobreturno ? <p className="text-gold-ink">Sobreturno</p> : null}
+                  </div>
                   <p className="text-muted">{duracionEnPalabras(fila.turno.durationMinutes)}</p>
                 </div>
                 <h2 className="mt-2 font-serif text-3xl leading-tight text-forest">{fila.turno.patientName}</h2>
